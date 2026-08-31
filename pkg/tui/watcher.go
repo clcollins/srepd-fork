@@ -132,8 +132,15 @@ func (m *model) renderWatcherEntries(width int) string {
 
 func (m *model) updateWatcherViewport() {
 	content := m.renderWatcherEntries(m.watcherViewport.Width)
+	// Follow-at-bottom: only snap to the newest output if the user was already
+	// at the bottom. An explicit scroll-up pins the view so streaming chunks
+	// and 30ms typewriter ticks no longer wipe the scroll position. Mirrors
+	// updateChatViewport so both panes behave identically.
+	wasAtBottom := m.watcherViewport.AtBottom()
 	m.watcherViewport.SetContent(content)
-	m.watcherViewport.GotoBottom()
+	if wasAtBottom {
+		m.watcherViewport.GotoBottom()
+	}
 
 	if m.chatMode {
 		m.updateChatViewport()

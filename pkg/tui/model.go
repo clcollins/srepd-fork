@@ -566,6 +566,7 @@ func InitialModel(
 		input:                 newTextInput(),
 		incidentViewer:        newIncidentViewer(),
 		logViewer:             newLogViewer(),
+		chatViewport:          newChatViewport(),
 		logFilePath:           defaultLogFilePath(),
 		logDestination:        LogDestination,
 		startupTime:           time.Now(),
@@ -713,6 +714,7 @@ func InitialModelWithConfig(
 		input:                 newTextInput(),
 		incidentViewer:        newIncidentViewer(),
 		logViewer:             newLogViewer(),
+		chatViewport:          newChatViewport(),
 		logFilePath:           defaultLogFilePath(),
 		logDestination:        LogDestination,
 		startupTime:           time.Now(),
@@ -1054,6 +1056,15 @@ func newLogViewer() viewport.Model {
 }
 
 func newWatcherViewport() viewport.Model {
+	vp := viewport.New(100, layoutDefaultWatcherRows)
+	return vp
+}
+
+// newChatViewport constructs the chat pane's viewport. This is a
+// consistency/hygiene fix so chatViewport is initialized like the other
+// viewports rather than relying on bubbles' lazy self-init inside Update. It
+// changes no runtime behavior — chat wheel scroll already worked via lazy init.
+func newChatViewport() viewport.Model {
 	vp := viewport.New(100, layoutDefaultWatcherRows)
 	return vp
 }

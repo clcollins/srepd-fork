@@ -1,16 +1,34 @@
 package tui
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	"strings"
 
-// mouseWatcherStartY returns the Y coordinate where the watcher pane begins.
-// This is computed from the current layout so it stays correct after window resizes.
-// The -4 adjustment accounts for style padding that the layout constants don't capture.
+	tea "github.com/charmbracelet/bubbletea"
+)
+
+// mouseWatcherStartY returns the Y coordinate (0-based row) of the watcher
+// pane's top-border row — the boundary at/below which wheel events target the
+// watcher rather than the incident table.
+//
+// It is measured from the same composition View() renders, not re-derived from
+// layout constants: the header plus renderMainAboveWatcher() (table + footer).
+// Because both this function and View() consume renderMainAboveWatcher(), the
+// routing boundary can never drift from the actual render — replacing the old
+// hardcoded "-4" fudge that silently misrouted when style/layout changed.
+//
+// The final view is wrapped in m.styles.Main.Render(...); Main adds no top
+// border/margin/padding, so there is no extra top offset to add here. Wheel
+// events are low-frequency, so measuring per event is cheap; do not cache in
+// View() (value receiver discards mutations).
 func (m model) mouseWatcherStartY() int {
-	containerVOverhead := m.styles.TableContainer.GetVerticalBorderSize() +
-		m.styles.TableContainer.GetVerticalPadding() +
-		m.styles.TableContainer.GetVerticalMargins()
+	return lineRows(m.renderHeader()) + lineRows(m.renderMainAboveWatcher())
+}
 
-	return layoutHeaderLines + containerVOverhead + m.layout.TableHeight + layoutFooterLines + layoutFooterNewline - 4
+// lineRows counts the rendered rows in a string that ends with a trailing
+// newline (each row is followed by "\n"), which is how renderHeader and
+// renderMainAboveWatcher emit their content.
+func lineRows(s string) int {
+	return strings.Count(s, "\n")
 }
 
 // handleMouseMsg routes mouse events to the correct component based on the
