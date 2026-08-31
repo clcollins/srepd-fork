@@ -419,6 +419,39 @@ func TestWatcherViewport_PreservesScrollOnUpdate(t *testing.T) {
 		assert.True(t, m.watcherViewport.AtBottom(),
 			"follow mode: staying at bottom must keep auto-following new content")
 	})
+
+	t.Run("chat mode: a watcher update preserves the chat viewport scroll", func(t *testing.T) {
+		// updateWatcherViewport fans out to updateChatViewport when chatMode is
+		// active. This asserts the same follow-at-bottom guard applies to the
+		// chat pane — the parity the B1 fix claims (both panes behave identically).
+		m := setupMouseTestModel(testIncidents())
+		windowSize = tea.WindowSizeMsg{Width: 80, Height: 40}
+		m.chatMode = true
+		m.watcherExpanded = true
+		m.recomputeLayout()
+		m.watcherViewport.Width = m.layout.WatcherWidth
+		m.watcherViewport.Height = m.layout.WatcherHeight
+		m.chatViewport.Width = m.layout.WatcherWidth
+		m.chatViewport.Height = 10
+
+		m.watcherBuffer = newWatcherBuffer(200)
+		for i := 0; i < 80; i++ {
+			m.watcherBuffer.Append("chat content line to force overflow")
+		}
+		m.updateWatcherViewport()
+
+		// User scrolls the chat pane up, away from the bottom.
+		m.chatViewport.ScrollUp(10)
+		scrolled := m.chatViewport.YOffset
+		assert.False(t, m.chatViewport.AtBottom(), "precondition: chat not at bottom")
+
+		// A new streamed chunk arrives and routes through updateWatcherViewport.
+		m.watcherBuffer.SetLast("chat content line updated by stream chunk")
+		m.updateWatcherViewport()
+
+		assert.Equal(t, scrolled, m.chatViewport.YOffset,
+			"chat scroll position must be preserved when scrolled up during a watcher update")
+	})
 }
 
 // T4 (chat path): documents that chat-pane wheel scroll works end-to-end
