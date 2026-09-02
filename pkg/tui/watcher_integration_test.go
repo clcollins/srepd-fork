@@ -298,17 +298,40 @@ func TestTypewriterTickMsg(t *testing.T) {
 }
 
 func TestMouseMsg_WatcherExpanded(t *testing.T) {
-	m := createTestModel()
+	// A wheel event with a real Y inside the watcher pane must be routed to the
+	// watcher, not the incident table. Boundary routing itself is covered by
+	// TestMouseScroll_WatcherBoundaryRouting; this asserts the table is left
+	// untouched when the event lands in the watcher area. Y is derived from the
+	// rendered composition, never from mouseWatcherStartY() directly.
+	m := createTestModelWithTable(testIncidents())
+	m.help = newHelp()
+	windowSize = tea.WindowSizeMsg{Width: 80, Height: 40}
 	m.watcherExpanded = true
-	windowSize = tea.WindowSizeMsg{Width: 80, Height: 60}
+	m.table.Focus()
 	m.recomputeLayout()
 	m.watcherViewport.Width = m.layout.WatcherWidth
 	m.watcherViewport.Height = m.layout.WatcherHeight
-	m.watcherViewport.SetContent("some content\nto scroll\nthrough")
 
-	mouseMsg := tea.MouseMsg{Action: tea.MouseActionPress, Button: tea.MouseButtonWheelDown}
+	sentinel := "WATCHER_SENTINEL_LINE"
+	m.watcherBuffer = newWatcherBuffer(50)
+	m.watcherBuffer.Append(sentinel)
+	m.updateWatcherViewport()
+
+	firstRow := watcherPaneFirstRow(m, sentinel)
+	assert.GreaterOrEqual(t, firstRow, 0)
+
+	tableCursorBefore := m.table.Cursor()
+	mouseMsg := tea.MouseMsg{
+		X:      10,
+		Y:      firstRow, // inside the watcher pane's rendered content
+		Action: tea.MouseActionPress,
+		Button: tea.MouseButtonWheelDown,
+	}
 	result, _ := m.Update(mouseMsg)
-	_ = result.(model)
+	updated := result.(model)
+
+	assert.Equal(t, tableCursorBefore, updated.table.Cursor(),
+		"wheel inside the watcher pane must not move the table cursor")
 }
 
 func TestMouseMsg_WatcherCollapsed(t *testing.T) {

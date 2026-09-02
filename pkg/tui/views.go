@@ -114,10 +114,7 @@ func (m model) View() string {
 		s.WriteString(m.renderChatPane())
 
 	default:
-		s.WriteString(m.styles.TableContainer.Render(m.table.View()))
-		s.WriteString("\n")
-		s.WriteString(m.renderFooter())
-		s.WriteString("\n")
+		s.WriteString(m.renderMainAboveWatcher())
 		if m.approvalsExpanded {
 			s.WriteString(m.renderApprovalsPane())
 		} else {
@@ -1364,6 +1361,22 @@ func (m model) renderApprovalsPane() string {
 		content = strings.Join(lines, "\n")
 	}
 	return m.styles.WatcherContainer.Render(content) + "\n"
+}
+
+// renderMainAboveWatcher renders the default-view content that sits above the
+// watcher/approvals pane: the incident table container, the footer, and their
+// trailing newlines. It is the single source of truth for that composition —
+// both View()'s default case and mouseWatcherStartY() consume it, so the wheel
+// routing boundary can never drift from what is actually rendered. It does NOT
+// include the header (written once before View()'s switch); mouseWatcherStartY
+// accounts for the header separately.
+func (m model) renderMainAboveWatcher() string {
+	var s strings.Builder
+	s.WriteString(m.styles.TableContainer.Render(m.table.View()))
+	s.WriteString("\n")
+	s.WriteString(m.renderFooter())
+	s.WriteString("\n")
+	return s.String()
 }
 
 func (m model) renderWatcherPane() string {
